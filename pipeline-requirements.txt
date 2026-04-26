@@ -1,0 +1,13 @@
+python-dotenv
+pytest
+pandas
+scikit-learn
+nltk
+google-generativeai
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+google-play-scraper
+app-store-scraper
+streamlit
+markdown
