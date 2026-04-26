@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(BASE_DIR)
 
-from src.agent.mcp import create_gmail_draft
+from src.agent.mcp import send_gmail_email
 
 def get_html_template(content_html: str) -> str:
     """Wrap the HTML content in a beautiful, styled template."""
@@ -149,17 +149,17 @@ def main():
         print("Error: MCP_GMAIL_TO or MCP_GMAIL_SUBJECT environment variables are missing.")
         return
         
-    print(f"Creating HTML email draft for {to_email}...")
+    print(f"Sending HTML email to {to_email}...")
     
-    # The create_email_draft script expects token.json to be in current directory
+    # The MCP tool expects token.json to be in current directory
     cwd = os.getcwd()
     try:
         mcp_server_dir = os.path.join(BASE_DIR, 'mcp-server')
         os.chdir(mcp_server_dir)
-        result = create_gmail_draft(to_email, subject, final_html, is_html=True)
+        result = send_gmail_email(to_email, subject, final_html, is_html=True)
         print("Gmail API Result:", result)
     except Exception as e:
-        print(f"Error creating Gmail draft: {e}")
+        print(f"Error sending Gmail email: {e}")
     finally:
         os.chdir(cwd)
 

@@ -130,3 +130,76 @@ def create_email_draft(to: str, subject: str, body: str, is_html: bool = False):
             "message": "Unexpected error occurred",
             "details": str(e)
         }
+
+
+def send_email(to: str, subject: str, body: str, is_html: bool = False):
+    """
+    Sends a Gmail email directly.
+
+    Args:
+        to (str): Recipient email
+        subject (str): Email subject
+        body (str): Email body
+        is_html (bool): Whether body is HTML
+
+    Returns:
+        dict: status + message
+    """
+
+    try:
+        logger.info("Starting send_email")
+
+        # -------- INPUT VALIDATION -------- #
+        if not to or not subject or not body:
+            logger.error("Missing required email fields")
+            return {
+                "status": "error",
+                "message": "to, subject, and body are required"
+            }
+
+        # -------- FORMAT BODY -------- #
+        if is_html:
+            formatted_body = body
+        else:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            formatted_body = f"[{timestamp}]\n\n{body}\n"
+
+        # -------- AUTH -------- #
+        creds = get_creds()
+        
+        # -------- INIT SERVICE -------- #
+        service = build("gmail", "v1", credentials=creds)
+
+        # -------- CREATE MESSAGE -------- #
+        message = create_message(to, subject, formatted_body, is_html)
+
+        # -------- EXECUTE API CALL -------- #
+        try:
+            sent_message = service.users().messages().send(
+                userId="me",
+                body=message
+            ).execute()
+
+            logger.info("Email sent successfully")
+
+            return {
+                "status": "success",
+                "message": "Email sent",
+                "message_id": sent_message.get("id")
+            }
+
+        except HttpError as e:
+            logger.error(f"Gmail API error: {e}")
+            return {
+                "status": "error",
+                "message": "Gmail API error",
+                "details": str(e)
+            }
+
+    except Exception as e:
+        logger.error(f"Unexpected error during send: {e}")
+        return {
+            "status": "error",
+            "message": "Unexpected error occurred",
+            "details": str(e)
+        }
