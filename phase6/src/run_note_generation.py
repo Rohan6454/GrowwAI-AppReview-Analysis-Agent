@@ -37,11 +37,15 @@ def main():
     with open(report_path, 'w', encoding='utf-8') as f:
         f.write(report_content)
     
+    from src.agent.db import save_report
+    print("Saving report to database...")
+    save_report("Weekly Executive Report", report_content)
+    
     # Word count validation
     word_count = len(report_content.split())
     print(f"Report generated. Word count: {word_count}")
     if word_count > 300: # allow slight buffer for LLM inaccuracy
-        print("Warning: Report might exceed the 250 words limit.")
+        print("Warning: Report might exceed the 300 words limit.")
         
     doc_id = os.environ.get("MCP_GOOGLE_DOCS_DOC_ID")
     if doc_id:

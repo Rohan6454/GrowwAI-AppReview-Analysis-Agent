@@ -17,7 +17,7 @@ def main():
     # Initialize Phase 0 database
     db_path = 'data/reviews.db'
     init_db(db_path)
-    print(f'✓ Database initialized: {db_path}')
+    print(f'[SUCCESS] Database initialized: {db_path}')
     
     # Ingest sample data
     print('\n=== INGESTING GROWW REVIEWS ===')
@@ -73,7 +73,7 @@ def main():
             print(f'  - {source}: {count} reviews')
     
     conn.close()
-    print('\n✓ Phase 1 ingestion pipeline complete!')
+    print('\n[SUCCESS] Phase 1 ingestion pipeline complete!')
 
 
 if __name__ == '__main__':

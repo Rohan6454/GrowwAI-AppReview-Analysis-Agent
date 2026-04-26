@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import pandas as pd
 
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS reviews (
@@ -23,58 +24,65 @@ CREATE TABLE IF NOT EXISTS themes (
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS review_theme_assignments (
-    review_id INTEGER NOT NULL,
-    theme_id INTEGER NOT NULL,
-    score REAL,
-    PRIMARY KEY (review_id, theme_id),
-    FOREIGN KEY (review_id) REFERENCES reviews(id),
-    FOREIGN KEY (theme_id) REFERENCES themes(id)
-);
-
-CREATE TABLE IF NOT EXISTS quotes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    review_id INTEGER NOT NULL,
-    theme_id INTEGER NOT NULL,
-    quote_text TEXT NOT NULL,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (review_id) REFERENCES reviews(id),
-    FOREIGN KEY (theme_id) REFERENCES themes(id)
-);
-
-CREATE TABLE IF NOT EXISTS actions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    theme_id INTEGER NOT NULL,
-    action_text TEXT NOT NULL,
-    priority INTEGER,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (theme_id) REFERENCES themes(id)
-);
-
 CREATE TABLE IF NOT EXISTS reports (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
     content TEXT NOT NULL,
     generated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
-
-CREATE TABLE IF NOT EXISTS email_drafts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    subject TEXT NOT NULL,
-    body TEXT NOT NULL,
-    generated_at TEXT DEFAULT CURRENT_TIMESTAMP
-);
 '''
 
+def get_db_url():
+    """Get the database URL from environment variables."""
+    db_url = os.environ.get("DATABASE_URL")
+    if db_url and db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    return db_url
 
 def init_db(db_path: str):
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    with sqlite3.connect(db_path) as conn:
-        cursor = conn.cursor()
-        cursor.executescript(SCHEMA)
-        conn.commit()
-    print(f'Initialized database schema at {db_path}')
+    """Initialize the database schema."""
+    db_url = get_db_url()
+    if db_url:
+        from sqlalchemy import create_engine, text
+        engine = create_engine(db_url)
+        with engine.connect() as conn:
+            # Split schema into individual statements for SQLAlchemy
+            for statement in SCHEMA.split(';'):
+                if statement.strip():
+                    # Remove AUTOINCREMENT for Postgres, it uses SERIAL or identity
+                    stmt = statement.replace("AUTOINCREMENT", "")
+                    conn.execute(text(stmt))
+            conn.commit()
+        print(f'Initialized cloud database schema')
+    else:
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            cursor.executescript(SCHEMA)
+            conn.commit()
+        print(f'Initialized local database schema at {db_path}')
 
+def save_report(title: str, content: str, db_path: str = 'data/reviews.db'):
+    """Save a report to the database."""
+    db_url = get_db_url()
+    if db_url:
+        from sqlalchemy import create_engine, text
+        engine = create_engine(db_url)
+        with engine.connect() as conn:
+            conn.execute(
+                text("INSERT INTO reports (title, content) VALUES (:title, :content)"),
+                {"title": title, "content": content}
+            )
+            conn.commit()
+    else:
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("INSERT INTO reports (title, content) VALUES (?, ?)", (title, content))
+            conn.commit()
 
 def get_connection(db_path: str):
+    db_url = get_db_url()
+    if db_url:
+        from sqlalchemy import create_engine
+        return create_engine(db_url)
     return sqlite3.connect(db_path)

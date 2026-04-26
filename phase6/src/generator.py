@@ -20,14 +20,22 @@ class WeeklyNoteGenerator:
         Generates a concise markdown report using LLM.
         """
         prompt = f"""
-You are a top-tier Product Manager. Based on the following user review analysis, write a concise weekly insight report (maximum 250 words) formatted in Markdown.
+You are a top-tier Product Manager. Based on the following user review analysis, write a highly structured weekly insight report (maximum 300 words) formatted in Markdown.
 
-Data points to include:
-- The top 5 themes from the reviews.
-- 5 representative user quotes (Make sure to highlight reviews where the sentiment is tough/critical to prompt stakeholders to make changes).
-- 5 prioritized action recommendations based on those critical reviews.
+FORMATTING REQUIREMENTS:
+Do NOT write sentences that just list numbers (e.g., avoid "1. First theme is... 2. Second theme is..."). 
+Instead, use a clear, easy-to-read structure with headings, bullet points, and blockquotes. Use exactly this structure:
 
-Ensure the tone is executive-friendly but urgent regarding areas of improvement, and formatting is clean. Do NOT include any PII.
+### 🌟 Top Themes
+(Use bullet points for the 5 themes, with a short bold title for each)
+
+### 💬 Critical User Voices
+(Use markdown blockquotes `>` for 5 representative tough/critical quotes, followed by a `- User` attribution)
+
+### ⚡ Priority Action Items
+(Use bullet points or checkboxes for the 5 recommended actions, keeping them actionable and concise)
+
+Ensure the tone is executive-friendly but urgent regarding areas of improvement. Do NOT include any PII.
 
 THEMES:
 {json.dumps(themes, indent=2)}

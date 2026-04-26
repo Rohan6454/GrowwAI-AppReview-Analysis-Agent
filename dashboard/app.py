@@ -12,7 +12,29 @@ BASE_DIR = Path(__file__).parent.parent
 DB_PATH = BASE_DIR / "data" / "reviews.db"
 REPORT_PATH = BASE_DIR / "data" / "weekly_report.md"
 
+@st.cache_data(ttl=60) # Reduced cache to 60s to prevent stale empty data
 def load_data():
+    db_url = os.environ.get("DATABASE_URL")
+    try:
+        if not db_url and "DATABASE_URL" in st.secrets:
+            db_url = st.secrets.get("DATABASE_URL")
+    except Exception:
+        pass # Ignore if st.secrets doesn't exist
+    
+    if db_url:
+        import sqlalchemy
+        try:
+            # Handle standard postgresql:// vs postgres:// URL scheme
+            if db_url.startswith("postgres://"):
+                db_url = db_url.replace("postgres://", "postgresql://", 1)
+            engine = sqlalchemy.create_engine(db_url)
+            df = pd.read_sql_query("SELECT * FROM reviews ORDER BY review_date DESC", engine)
+            return df
+        except Exception as e:
+            st.error(f"Error connecting to cloud database: {e}")
+            return pd.DataFrame()
+            
+    # Fallback to local SQLite database
     if not DB_PATH.exists():
         return pd.DataFrame()
     conn = sqlite3.connect(DB_PATH)
@@ -20,17 +42,56 @@ def load_data():
     conn.close()
     return df
 
+def load_report():
+    db_url = os.environ.get("DATABASE_URL")
+    if db_url:
+        import sqlalchemy
+        from sqlalchemy import text
+        try:
+            if db_url.startswith("postgres://"):
+                db_url = db_url.replace("postgres://", "postgresql://", 1)
+            engine = sqlalchemy.create_engine(db_url)
+            with engine.connect() as conn:
+                result = conn.execute(text("SELECT content FROM reports ORDER BY generated_at DESC LIMIT 1")).fetchone()
+                if result:
+                    return result[0]
+        except Exception as e:
+            st.error(f"Error fetching report from cloud database: {e}")
+            
+    # Fallback to local file
+    if REPORT_PATH.exists():
+        with open(REPORT_PATH, "r", encoding="utf-8") as f:
+            return f.read()
+    
+    # Fallback to local SQLite DB if file missing
+    if DB_PATH.exists():
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute("SELECT content FROM reports ORDER BY generated_at DESC LIMIT 1")
+            result = cursor.fetchone()
+            conn.close()
+            if result:
+                return result[0]
+        except:
+            pass
+            
+    return None
+
 st.title("📊 App Review Insights Dashboard")
 st.markdown("Interact with the raw review data and view the latest AI-generated executive summaries.")
+
+if st.button("🔄 Refresh Data"):
+    st.cache_data.clear()
+    st.rerun()
 
 tab1, tab2 = st.tabs(["📑 Weekly Executive Report", "🔍 Review Explorer"])
 
 with tab1:
     st.header("Latest AI Insights")
-    if REPORT_PATH.exists():
-        with open(REPORT_PATH, "r", encoding="utf-8") as f:
-            content = f.read()
-        st.markdown(content)
+    report_content = load_report()
+    if report_content:
+        st.markdown(report_content)
     else:
         st.warning("No weekly report found. Please run the AI pipeline first.")
 

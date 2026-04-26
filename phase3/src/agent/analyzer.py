@@ -55,6 +55,24 @@ class ReviewAnalyzer:
         return cluster_keywords
 
     def generate_theme_name(self, keywords: List[str]) -> str:
-        """Simple heuristic to generate a theme name from keywords."""
-        # Capitalize and join top 2-3 keywords
+        """Use Gemini to dynamically generate a theme name from keywords."""
+        try:
+            import google.generativeai as genai
+            import os
+            api_key = os.environ.get("GOOGLE_API_KEY")
+            if api_key:
+                genai.configure(api_key=api_key)
+                # Use gemini-2.5-flash for fast and cheap inference
+                model = genai.GenerativeModel('gemini-2.5-flash')
+                prompt = f"Given these review keywords: {', '.join(keywords)}. Generate a short, catchy, 1-4 word theme name that summarizes them. Only return the theme name, no quotes or extra text."
+                response = model.generate_content(prompt)
+                name = response.text.strip()
+                # Remove quotes if the model added them
+                if name.startswith('"') and name.endswith('"'):
+                    name = name[1:-1]
+                return name
+        except Exception as e:
+            print(f"Error generating theme name with Gemini: {e}")
+            
+        # Fallback to keyword concatenation if Gemini fails
         return " / ".join([k.capitalize() for k in keywords[:2]])

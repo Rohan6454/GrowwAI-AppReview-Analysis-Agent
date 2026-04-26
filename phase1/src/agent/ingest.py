@@ -83,7 +83,7 @@ class CSVDataAdapter:
 
 
 class DatabaseIngester:
-    """Ingest reviews into SQLite database."""
+    """Ingest reviews into database (SQLite or Cloud DB)."""
     
     def __init__(self, db_path: str):
         """Initialize database ingester."""
@@ -107,30 +107,54 @@ class DatabaseIngester:
         }
         
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
+            from src.agent.db import get_connection
+            conn_or_engine = get_connection(self.db_path)
             
-            for review in reviews:
-                try:
-                    cursor.execute('''
-                        INSERT INTO reviews (source, rating, review_title, review_text, review_date)
-                        VALUES (?, ?, ?, ?, ?)
-                    ''', (
-                        review.source,
-                        review.rating,
-                        review.review_title,
-                        review.review_text,
-                        review.review_date
-                    ))
-                    stats['inserted'] += 1
-                
-                except sqlite3.IntegrityError:
-                    stats['skipped'] += 1
-                except Exception as e:
-                    stats['errors'] += 1
+            is_sqlalchemy = not hasattr(conn_or_engine, 'cursor')
             
-            conn.commit()
-            conn.close()
+            if is_sqlalchemy:
+                from sqlalchemy import text
+                with conn_or_engine.connect() as conn:
+                    for review in reviews:
+                        try:
+                            conn.execute(
+                                text('''
+                                    INSERT INTO reviews (source, rating, review_title, review_text, review_date)
+                                    VALUES (:source, :rating, :title, :text, :date)
+                                '''),
+                                {
+                                    "source": review.source,
+                                    "rating": review.rating,
+                                    "title": review.review_title,
+                                    "text": review.review_text,
+                                    "date": review.review_date
+                                }
+                            )
+                            stats['inserted'] += 1
+                        except Exception as e:
+                            stats['errors'] += 1
+                    conn.commit()
+            else:
+                cursor = conn_or_engine.cursor()
+                for review in reviews:
+                    try:
+                        cursor.execute('''
+                            INSERT INTO reviews (source, rating, review_title, review_text, review_date)
+                            VALUES (?, ?, ?, ?, ?)
+                        ''', (
+                            review.source,
+                            review.rating,
+                            review.review_title,
+                            review.review_text,
+                            review.review_date
+                        ))
+                        stats['inserted'] += 1
+                    except sqlite3.IntegrityError:
+                        stats['skipped'] += 1
+                    except Exception as e:
+                        stats['errors'] += 1
+                conn_or_engine.commit()
+                conn_or_engine.close()
         
         except Exception as e:
             raise ValueError(f"Database ingestion error: {str(e)}")

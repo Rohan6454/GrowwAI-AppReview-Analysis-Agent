@@ -26,7 +26,8 @@ def get_html_template(content_html: str) -> str:
             color: #333333;
           }}
           .container {{
-            max-width: 600px;
+            max-width: 1400px;
+            width: 95%;
             margin: 0 auto;
             background-color: #ffffff;
             border-radius: 12px;
@@ -61,9 +62,12 @@ def get_html_template(content_html: str) -> str:
             border-bottom: 1px solid #e5e7eb;
           }}
           .content h3 {{
-            color: #1f2937;
-            font-size: 16px;
-            margin-top: 20px;
+            color: #4f46e5;
+            font-size: 18px;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 8px;
           }}
           .content ul {{
             padding-left: 20px;
@@ -97,6 +101,28 @@ def get_html_template(content_html: str) -> str:
             border-radius: 6px;
             font-weight: bold;
             margin-top: 20px;
+          }}
+          .grid-container {{
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 25px;
+            justify-content: center;
+          }}
+          .grid-item {{
+            flex: 1;
+            min-width: 320px;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            box-sizing: border-box;
+          }}
+          @media (max-width: 900px) {{
+            .grid-container {{
+              flex-direction: column;
+            }}
           }}
         </style>
       </head>
@@ -137,10 +163,19 @@ def main():
         report_content = f.read()
         
     print("Converting markdown to styled HTML...")
-    # Convert markdown to HTML
-    html_content = markdown.markdown(report_content)
+    import re
+    # Split the markdown into sections separated by ###
+    parts = re.split(r'(?=\n### )', "\n" + report_content)
+    
+    html_parts = []
+    for part in parts:
+        if part.strip():
+            html_parts.append(f'<div class="grid-item">{markdown.markdown(part.strip())}</div>')
+            
+    content_html = f'<div class="grid-container">{"".join(html_parts)}</div>'
+    
     # Wrap in our dashboard-like template
-    final_html = get_html_template(html_content)
+    final_html = get_html_template(content_html)
     
     to_email = os.environ.get("MCP_GMAIL_TO")
     subject = os.environ.get("MCP_GMAIL_SUBJECT")
