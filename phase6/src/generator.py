@@ -12,8 +12,8 @@ class WeeklyNoteGenerator:
             raise ValueError("GOOGLE_API_KEY environment variable is missing.")
         genai.configure(api_key=api_key)
         
-        # Use gemini-2.5-flash for summarization task
-        self.model = genai.GenerativeModel('gemini-2.5-flash')
+        # Use gemini-1.5-flash (1500 req/day free tier vs 20 for 2.5-flash)
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
 
     def generate_report(self, themes: list, quotes: list, actions: list) -> str:
         """

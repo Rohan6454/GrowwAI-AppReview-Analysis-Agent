@@ -5,6 +5,11 @@ import time
 import logging
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+# Load env vars from .env file
+load_dotenv()
+
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
@@ -17,23 +22,34 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-def run_step_with_retry(name, command, max_retries=3, delay=5):
+def run_step_with_retry(name, command, max_retries=3, delay=60):
     logger.info(f"========== RUNNING STEP: {name} ==========")
+    
+    # Ensure current process environment is passed to subprocess
+    env = os.environ.copy()
+    env["PYTHONUTF8"] = "1"
     
     for attempt in range(1, max_retries + 1):
         try:
             # We use shell=True for Windows/Linux compatibility with environments
-            result = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
+            result = subprocess.run(command, shell=True, check=True, capture_output=True, text=True, env=env)
             logger.info(f"[{name}] SUCCESS on attempt {attempt}")
             logger.info(f"Output:\n{result.stdout}")
             return True
         except subprocess.CalledProcessError as e:
             logger.warning(f"[{name}] FAILED on attempt {attempt}")
-            logger.error(f"Error Output:\n{e.stderr or e.stdout}")
+            error_output = e.stderr or e.stdout
+            logger.error(f"Error Output:\n{error_output}")
             
             if attempt < max_retries:
-                logger.info(f"Retrying in {delay} seconds...")
-                time.sleep(delay)
+                # If it's a rate limit error, wait longer
+                wait = delay
+                if "429" in error_output or "RESOURCE_EXHAUSTED" in error_output or "quota" in error_output.lower():
+                    wait = 90  # Wait 90s for rate limit errors
+                    logger.info(f"Rate limit detected. Waiting {wait} seconds before retry...")
+                else:
+                    logger.info(f"Retrying in {wait} seconds...")
+                time.sleep(wait)
             else:
                 logger.error(f"[{name}] Exhausted all {max_retries} retries. Aborting pipeline.")
                 return False
