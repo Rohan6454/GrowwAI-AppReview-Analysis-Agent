@@ -1,0 +1,27 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.env
+data/
+*.db
+.DS_Store
+.idea/
+.vscode/
+
+# Credentials (NEVER commit these)
+token.json
+credentials.json
+mcp-server/token.json
+mcp-server/credentials.json
+
+# Logs
+pipeline.log
+
+# Large binary/history files
+History_copy
+History_copy_2
