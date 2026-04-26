@@ -9,5 +9,6 @@ google-auth-httplib2
 google-auth-oauthlib
 google-play-scraper
 app-store-scraper
+emoji
 streamlit
 markdown
