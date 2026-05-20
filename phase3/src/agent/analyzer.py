@@ -62,8 +62,8 @@ class ReviewAnalyzer:
             api_key = os.environ.get("GOOGLE_API_KEY")
             if api_key:
                 genai.configure(api_key=api_key)
-                # Use gemini-1.5-flash (1500 req/day free tier vs 20 for 2.5-flash)
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                model_name = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash")
+                model = genai.GenerativeModel(model_name)
                 prompt = f"Given these review keywords: {', '.join(keywords)}. Generate a short, catchy, 1-4 word theme name that summarizes them. Only return the theme name, no quotes or extra text."
                 response = model.generate_content(prompt)
                 name = response.text.strip()

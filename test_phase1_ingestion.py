@@ -6,18 +6,26 @@ import sys
 import sqlite3
 from pathlib import Path
 
-# Add phase1 src to path
-sys.path.insert(0, str(Path('phase1/src')))
+import os
+from dotenv import load_dotenv
+
+# Add project root to sys path
+BASE_DIR = Path(__file__).parent
+sys.path.insert(0, str(BASE_DIR))
+sys.path.insert(0, str(BASE_DIR / 'phase1' / 'src'))
+
+# Load env vars
+load_dotenv(BASE_DIR / '.env')
 
 from agent.ingest import ingest_csv_to_db
-from phase0.src.agent.db import init_db
+from src.agent.db import init_db
 
 
 def main():
-    # Initialize Phase 0 database
+    # Initialize database (handles both local and cloud)
     db_path = 'data/reviews.db'
     init_db(db_path)
-    print(f'[SUCCESS] Database initialized: {db_path}')
+    print(f'[SUCCESS] Database initialized')
     
     # Ingest sample data
     print('\n=== INGESTING GROWW REVIEWS ===')
@@ -27,9 +35,17 @@ def main():
     print(f'  - CSV Path: {result["csv_path"]}')
     print(f'  - Reviews Loaded: {result["reviews_loaded"]}')
     print(f'  - Load Errors: {result["load_errors"]}')
-    print(f'  - Ingested: {result["ingestion_stats"]["inserted"]}')
-    print(f'  - Skipped: {result["ingestion_stats"]["skipped"]}')
-    print(f'  - Errors: {result["ingestion_stats"]["errors"]}')
+    
+    if result["success"]:
+        stats = result["ingestion_stats"]
+        print(f'  - Ingested: {stats.get("inserted", 0)}')
+        print(f'  - Skipped: {stats.get("skipped", 0)}')
+        print(f'  - Errors: {stats.get("errors", 0)}')
+    else:
+        print(f'  - INGESTION FAILED!')
+        if result["errors"]:
+            print(f'  - Errors: {result["errors"]}')
+        sys.exit(1)
     
     # Verify database
     conn = sqlite3.connect(db_path)

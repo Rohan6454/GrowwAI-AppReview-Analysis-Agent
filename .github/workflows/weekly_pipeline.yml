@@ -35,6 +35,7 @@ jobs:
         MCP_GMAIL_TO: ${{ secrets.MCP_GMAIL_TO }}
         MCP_GMAIL_SUBJECT: ${{ secrets.MCP_GMAIL_SUBJECT }}
         GOOGLE_TOKEN_JSON: ${{ secrets.GOOGLE_TOKEN_JSON }}
+        GEMINI_MODEL: gemini-3.5-flash
       run: |
         python run_pipeline.py
         

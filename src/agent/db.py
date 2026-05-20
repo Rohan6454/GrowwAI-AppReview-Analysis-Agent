@@ -49,8 +49,8 @@ def init_db(db_path: str):
             # Split schema into individual statements for SQLAlchemy
             for statement in SCHEMA.split(';'):
                 if statement.strip():
-                    # Remove AUTOINCREMENT for Postgres, it uses SERIAL or identity
-                    stmt = statement.replace("AUTOINCREMENT", "")
+                    # PostgreSQL uses SERIAL for auto-incrementing primary keys
+                    stmt = statement.replace("INTEGER PRIMARY KEY AUTOINCREMENT", "SERIAL PRIMARY KEY")
                     conn.execute(text(stmt))
             conn.commit()
         print(f'Initialized cloud database schema')
